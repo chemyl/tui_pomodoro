@@ -44,18 +44,50 @@ fn main() {
 
     // create TUI
     siv.add_layer(Dialog::around(text_view).button("add 1 minute", {
+        // create a clone of the variables
         let pomodoro_duration = Arc::clone(&pomodoro_duration);
         let time_countdown = Arc::clone(&time_countdown);
-        move |x| {
+        // closures with data transfer by move
+        move |cursive| {
             let mut duration = pomodoro_duration.lock().unwrap();
             *duration += 60;
             let mut timer_duration = time_countdown.lock().unwrap();
             *timer_duration = *duration;
-            x.call_on_name("Timer", |view: &mut TextView| {
+            // textView updating
+            cursive.call_on_name("Timer", |view: &mut TextView| {
                 view.set_content(format!("Time: {}", time_formatter(*duration)));
             });
         }
-    }));
+    }).button("minus 1 minute", {
+        let pomodoro_duration = Arc::clone(&pomodoro_duration);
+        let time_countdown = Arc::clone(&time_countdown);
+        move |cursive| {
+            let mut duration = pomodoro_duration.lock().unwrap();
+            if *duration > 60 {
+                *duration -= 60;
+            }
+            let mut timer_duration = time_countdown.lock().unwrap();
+            *timer_duration = *duration;
+            cursive.call_on_name("Timer", |view: &mut TextView| {
+                view.set_content(format!("Time: {}", time_formatter(*duration)));
+            });
+        }
+    }).button("Start|Stop", {
+        let is_running_clone = Arc::clone(&is_running);
+        move |cursive| {
+            let mut running = is_running_clone.lock().unwrap();
+            *running = !*running;
+            if *running {
+                cursive.call_on_name("Timer", move |view: &mut TextView| {
+                    view.set_content("Timer is running...");
+                });
+            } else {
+                cursive.call_on_name("Timer", move |view: &mut TextView| {
+                    view.set_content("Timer is paused...");
+                });
+            }
+        }
+    }).button("Exit", |cursive| cursive.quit()).title("Pomodoro Timer"));
 
 
     siv.run();
